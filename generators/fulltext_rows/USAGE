@@ -1,0 +1,11 @@
+Description:
+    The fulltext_rows generator creates a migration to create the
+    table needed to use acts_as_fulltextable.
+    It takes a list of models for which the index should be created.
+    Make sure the models you're passing the generator include a call
+    to acts_as_fulltextable before you run it.
+
+Example:
+    ./script/generate fulltext_rows model1 model2 model3
+
+    Then run: rake db:migrate
