@@ -5,14 +5,17 @@ It allows you to create an auxiliary to be used for full-text searches.
 It behaves like a polymorphic association, so it can be used with any
 ActiveRecord model.
 
-See http://blog.wonsys.net/
+See http://blog.wonsys.net/posts/26-our-first-plugin-acts_as_fulltextable/ and
+http://code.google.com/p/wonsys/
+
+Bug tracker: http://wonsysos.16bugs.com/
 
 Only tested with MySQL 5.x
 
 == Step 1
 
 Install the plugin:
-  script/plugin install http://opensvn.csie.org/wonsys/plugins/acts_as_fulltextable
+  script/plugin install http://wonsys.googlecode.com/svn/plugins/acts_as_fulltextable/
 
 == Step 2
 
