@@ -3,12 +3,11 @@ require "fulltext_row"
 
 module ActsAsFulltextable
   module ClassMethods
-    # Associates the model class with a sphinx index, which will be used by find_with_sphinx method.
-    # You can pass the following options:
-    # 
-    # :host   is the host name or an IP address where searchd daemon is running, default is localhost
-    # :port   is the port number of the searchd process, default is 3312
-    # :index  is the name of the index to be used, default is the name of the table for the current model class.
+    # Makes a model searchable.
+    # Takes a list of fields to use to create the index. It also take an option (:check_for_changes,
+    # which defaults to true) to tell the engine wether it should check if the value of a given
+    # instance has changed before it actually updates the associated fulltext row.
+    #
     def acts_as_fulltextable(*attr_names)
       configuration = { :check_for_changes => true }
       configuration.update(attr_names.pop) if attr_names.last.is_a?(Hash)
