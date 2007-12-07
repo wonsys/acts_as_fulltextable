@@ -12,7 +12,7 @@ class FulltextRow < ActiveRecord::Base
   # * only: limit search to these classes. Defaults to all classes. (should be a symbol or an Array of symbols)
   #
   def self.search(query, options = {})
-    default_options = {:limit => 10, :offset => 0, :active_record => true}
+    default_options = {:limit => 10, :offset => 0, :active_record => true, :parent_id => nil}
     options = default_options.merge(options)
     options[:offset] = 0 if options[:offset] < 0
     options[:limit] = 10 if options[:limit] < 0
@@ -20,7 +20,7 @@ class FulltextRow < ActiveRecord::Base
     options[:only] = [options[:only]] unless options[:only].nil? || options[:only].is_a?(Array)
     options[:only] = options[:only].map {|o| o.to_s.camelize}.uniq.compact unless options[:only].nil?
 
-    rows = raw_search(query, options[:only], options[:limit], options[:offset])
+    rows = raw_search(query, options[:only], options[:limit], options[:offset], options[:parent_id])
     if options[:active_record]
       types = {}
       rows.each {|r| types.include?(r.fulltextable_type) ? (types[r.fulltextable_type] << r.fulltextable_id) : (types[r.fulltextable_type] = [r.fulltextable_id])}
@@ -41,12 +41,20 @@ private
   # * only: limit search to these classes. Defaults to all classes.
   # * limit: maximum number of rows to return (use 0 for all). Defaults to 10.
   # * offset: offset to apply to query. Defaults to 0.
+  # * parent_id: limit query to record with passed parent_id. An Array of ids is fine.
   #
-  def self.raw_search(query, only, limit, offset)
+  def self.raw_search(query, only, limit, offset, parent_id = nil)
     unless only.nil? || only.empty?
       only_condition = " AND fulltextable_type IN (#{only.map {|c| (/\A\w+\Z/ === c.to_s) ? "'#{c.to_s}'" : nil}.uniq.compact.join(',')})"
     else
       only_condition = ''
+    end
+    unless parent_id.nil?
+      if parent_id.is_a?(Array)
+        only_condition += " AND parent_id IN (#{parent_id.join(',')})"
+      else
+        only_condition += " AND parent_id = #{parent_id.to_i}"
+      end
     end
     query.gsub!(/(\S+)/, '\1*')
     self.find(:all,

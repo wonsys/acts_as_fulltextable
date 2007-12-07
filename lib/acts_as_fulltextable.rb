@@ -7,9 +7,11 @@ module ActsAsFulltextable
     # Takes a list of fields to use to create the index. It also take an option (:check_for_changes,
     # which defaults to true) to tell the engine wether it should check if the value of a given
     # instance has changed before it actually updates the associated fulltext row.
+    # If option :parent_id is not nulled, it is used as the field to be used as the parent of the record,
+    # which is useful if you want to limit your queries to a scope.
     #
     def acts_as_fulltextable(*attr_names)
-      configuration = { :check_for_changes => true }
+      configuration = { :check_for_changes => true, :parent_id => nil }
       configuration.update(attr_names.pop) if attr_names.last.is_a?(Hash)
       configuration[:fields] = attr_names.flatten.uniq.compact
       write_inheritable_attribute 'fulltext_options', configuration
@@ -52,14 +54,20 @@ module ActsAsFulltextable
     # Creates the fulltext_row record for self
     #
     def create_fulltext_record
-      FulltextRow.create(:fulltextable_type => self.class.to_s, :fulltextable_id => self.id, :value => self.fulltext_value)
+      FulltextRow.create(:fulltextable_type => self.class.to_s, :fulltextable_id => self.id, :value => self.fulltext_value, :parent_id => self.parent_id_value)
+    end
+    
+    # Returns the parent_id value or nil if it wasn't set.
+    #
+    def parent_id_value
+      self.class.fulltext_options[:parent_id].nil? ? nil : self.send(self.class.fulltext_options[:parent_id])
     end
     
     # Updates self's fulltext_row record
     #
     def update_fulltext_record
       row = FulltextRow.find_by_fulltextable_type_and_fulltextable_id(self.class.to_s, self.id) if self.class.fulltext_options[:check_for_changes]
-      FulltextRow.update_all(["value = ?", self.fulltext_value], ["fulltextable_type = ? AND fulltextable_id = ?", self.class.to_s, self.id]) if !(self.class.fulltext_options[:check_for_changes]) || (row.value != self.fulltext_value)
+      FulltextRow.update_all(["value = ?, parent_id = ?", self.fulltext_value, self.parent_id_value], ["fulltextable_type = ? AND fulltextable_id = ?", self.class.to_s, self.id]) if !(self.class.fulltext_options[:check_for_changes]) || (row.value != self.fulltext_value)
     end
     
     # Returns self's value created by concatenating fulltext fields for its class
