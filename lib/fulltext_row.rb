@@ -56,7 +56,7 @@ private
         only_condition += " AND parent_id = #{parent_id.to_i}"
       end
     end
-    query.gsub!(/(\S+)/, '\1*')
+    query = query.gsub(/(\S+)/, '\1*')
     self.find(:all,
               :conditions => [("match(value) against(? in boolean mode)" + only_condition), query],
               :select => "fulltext_rows.*, #{sanitize_sql(["match(`value`) against(? in boolean mode) AS relevancy", query])}",
