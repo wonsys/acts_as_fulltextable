@@ -67,7 +67,7 @@ module ActsAsFulltextable
     #
     def update_fulltext_record
       row = FulltextRow.find_by_fulltextable_type_and_fulltextable_id(self.class.to_s, self.id) if self.class.fulltext_options[:check_for_changes]
-      FulltextRow.update_all(["value = ?, parent_id = ?", self.fulltext_value, self.parent_id_value], ["fulltextable_type = ? AND fulltextable_id = ?", self.class.to_s, self.id]) if !(self.class.fulltext_options[:check_for_changes]) || (row.value != self.fulltext_value)
+      FulltextRow.update_all(["value = ?, parent_id = ?", self.fulltext_value, self.parent_id_value], ["fulltextable_type = ? AND fulltextable_id = ?", self.class.to_s, self.id]) if !(self.class.fulltext_options[:check_for_changes]) || (row.value != self.fulltext_value) || (self.parent_id_value != row.parent_id)
     end
     
     # Returns self's value created by concatenating fulltext fields for its class
