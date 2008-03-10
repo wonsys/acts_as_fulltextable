@@ -1,4 +1,7 @@
 # ActsAsFulltextable
+#
+# 2008-03-07
+# Patched by Artūras Šlajus <x11@arturaz.net> for will_paginate support
 require "fulltext_row"
 
 module ActsAsFulltextable
@@ -35,11 +38,15 @@ module ActsAsFulltextable
     # It takes three options:
     # * limit: maximum number of rows to return. Defaults to 10.
     # * offset: offset to apply to query. Defaults to 0.
+    # * page: only available with will_paginate plugin installed.
     # * active_record: wether a ActiveRecord objects should be returned or an Array of [class_name, id]
     #
     def find_fulltext(query, options = {})
-      default_options = {:limit => 10, :offset => 0, :active_record => true}
+      default_options = {:active_record => true}
       options = default_options.merge(options)
+      unless options[:page]
+        options = {:limit => 10, :offset => 0}.merge(options)
+      end
       options[:only] = self.to_s.underscore.to_sym # Only look for object belonging to this class
 
       FulltextRow.search(query, options)
