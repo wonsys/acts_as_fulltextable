@@ -73,7 +73,14 @@ module ActsAsFulltextable
     # Updates self's fulltext_row record
     #
     def update_fulltext_record
-      row = FulltextRow.find_by_fulltextable_type_and_fulltextable_id(self.class.to_s, self.id) if self.class.fulltext_options[:check_for_changes]
+      if self.class.fulltext_options[:check_for_changes]
+        row = FulltextRow.find_by_fulltextable_type_and_fulltextable_id(self.class.to_s, self.id)
+        # It should never happen, but just in case we haven't got a row for the record, yet, create it instead of updating it.
+        if row.nil?
+          self.create_fulltext_record
+          return
+        end
+      end
       FulltextRow.update_all(["value = ?, parent_id = ?", self.fulltext_value, self.parent_id_value], ["fulltextable_type = ? AND fulltextable_id = ?", self.class.to_s, self.id]) if !(self.class.fulltext_options[:check_for_changes]) || (row.value != self.fulltext_value) || (self.parent_id_value != row.parent_id)
     end
     
