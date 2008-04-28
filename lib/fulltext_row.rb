@@ -3,6 +3,11 @@
 # 2008-03-07
 # Patched by Artūras Šlajus <x11@arturaz.net> for will_paginate support
 class FulltextRow < ActiveRecord::Base
+  # If FULLTEXT_ROW_TABLE is set, use it as the table name
+  begin
+    set_table_name FULLTEXT_ROW_TABLE if Object.const_get('FULLTEXT_ROW_TABLE')
+  rescue
+  end
   belongs_to  :fulltextable,
               :polymorphic => true
   validates_presence_of   :fulltextable_type, :fulltextable_id
