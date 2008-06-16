@@ -43,7 +43,7 @@ class FulltextRow < ActiveRecord::Base
       types.each {|k, v| objects[k] = Object.const_get(k).find(v)}
       objects.each {|k, v| v.sort! {|x, y| types[k].index(x.id) <=> types[k].index(y.id)}}
 
-      if defined?(WillPaginate)
+      if defined?(WillPaginate) && options[:page]
         result = WillPaginate::Collection.new(
           rows.current_page,
           rows.per_page,
@@ -90,7 +90,7 @@ private
       :order => 'relevancy DESC, value ASC'
     }
 
-    if defined?(WillPaginate)
+    if defined?(WillPaginate) && page
       self.paginate(:all, search_options.merge(:page => page))
     else
       self.find(:all, search_options.merge(:limit => limit, :offset => offset))
