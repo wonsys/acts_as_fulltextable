@@ -27,8 +27,10 @@ class FulltextRow < ActiveRecord::Base
     unless options[:page]
       options = {:limit => 10, :offset => 0}.merge(options)
       options[:offset] = 0 if options[:offset] < 0
-      options[:limit] = 10 if options[:limit] < 0
-      options[:limit] = nil if options[:limit] == 0
+      unless options[:limit].nil?
+        options[:limit] = 10 if options[:limit] < 0
+        options[:limit] = nil if options[:limit] == 0
+      end
     end
     options[:only] = [options[:only]] unless options[:only].nil? || options[:only].is_a?(Array)
     options[:only] = options[:only].map {|o| o.to_s.camelize}.uniq.compact unless options[:only].nil?
