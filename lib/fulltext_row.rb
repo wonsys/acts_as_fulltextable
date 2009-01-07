@@ -96,15 +96,15 @@ private
       matches = []
       matches << [query_parts.map {|w| "+#{w}"}.join(' '), 5] # match_all_exact
       matches << [query_parts.map {|w| "+#{w}*"}.join(' '), query_parts.size > 3 ? 2 : 1] # match_all_wildcard
-      matches << (clean_query = [query_parts.map {|w| "#{w}"}.join(' '), query_parts.size <= 3 ? 2 : 1]) # match_some_exact
+      matches << [query_parts.map {|w| "#{w}"}.join(' '), query_parts.size <= 3 ? 2 : 1] # match_some_exact
       matches << [search_query, 0.5] # match_some_wildcard
       
-      relevancy = matches.map {|m| sanitize_sql(["match(`value`) against(? in boolean mode)", m[0]]) + " * m[1]"}.join(' + ')
+      relevancy = matches.map {|m| sanitize_sql(["(match(`value`) against(? in boolean mode) * #{m[1]})", m[0]])}.join(' + ')
       
       search_options = {
-        :conditions => [("match(value) against(? in boolean mode)" + only_condition), query],
+        :conditions => [("match(value) against(? in boolean mode)" + only_condition), search_query],
         :select => "fulltext_rows.*, #{relevancy} AS relevancy",
-        :order => "#{sanitize_sql(['LOCATE(LOWER(?), LOWER(value)) ASC', clean_query])}, relevancy DESC, value ASC"
+        :order => "#{sanitize_sql(['LOCATE(LOWER(?), LOWER(value)) ASC', query_parts.join(' ')])}, relevancy DESC, value ASC"
       }
     else
       query = query.gsub(/(\S+)/, '\1*')
