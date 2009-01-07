@@ -8,6 +8,8 @@ class FulltextRow < ActiveRecord::Base
     set_table_name FULLTEXT_ROW_TABLE if Object.const_get('FULLTEXT_ROW_TABLE')
   rescue
   end
+  @@use_advanced_search = false
+  
   belongs_to  :fulltextable,
               :polymorphic => true
   validates_presence_of   :fulltextable_type, :fulltextable_id
@@ -60,6 +62,11 @@ class FulltextRow < ActiveRecord::Base
     end
   end
   
+  # Use advanced search mechanism, instead of pure fulltext search.
+  #
+  def self.use_advanced_search!
+    @@use_advanced_search = true
+  end
 private
   # Performs a raw full-text search.
   # * query: string to be searched
@@ -82,13 +89,31 @@ private
         only_condition += " AND parent_id = #{parent_id.to_i}"
       end
     end
-
-    query = query.gsub(/(\S+)/, '\1*')
-    search_options = {
-      :conditions => [("match(value) against(? in boolean mode)" + only_condition), query],
-      :select => "fulltext_rows.*, #{sanitize_sql(["match(`value`) against(? in boolean mode) AS relevancy", query])}",
-      :order => "relevancy DESC, #{sanitize_sql(['LOCATE(LOWER(?), LOWER(value)) ASC', query.gsub(/[\+\-\*]/, '')])}, value ASC"
-    }
+    
+    if @@use_advanced_search
+      query_parts = query.gsub(/[\*\+\-]/, '').split(' ')
+      search_query = query_parts.map {|w| "#{w}*"}.join(' ')
+      matches = []
+      matches << [query_parts.map {|w| "+#{w}"}.join(' '), 5] # match_all_exact
+      matches << [query_parts.map {|w| "+#{w}*"}.join(' '), query_parts.size > 3 ? 2 : 1] # match_all_wildcard
+      matches << (clean_query = [query_parts.map {|w| "#{w}"}.join(' '), query_parts.size <= 3 ? 2 : 1]) # match_some_exact
+      matches << [search_query, 0.5] # match_some_wildcard
+      
+      relevancy = matches.map {|m| sanitize_sql(["match(`value`) against(? in boolean mode)", m[0]]) + " * m[1]"}.join(' + ')
+      
+      search_options = {
+        :conditions => [("match(value) against(? in boolean mode)" + only_condition), query],
+        :select => "fulltext_rows.*, #{relevancy} AS relevancy",
+        :order => "#{sanitize_sql(['LOCATE(LOWER(?), LOWER(value)) ASC', clean_query])}, relevancy DESC, value ASC"
+      }
+    else
+      query = query.gsub(/(\S+)/, '\1*')
+      search_options = {
+        :conditions => [("match(value) against(? in boolean mode)" + only_condition), query],
+        :select => "fulltext_rows.*, #{sanitize_sql(["match(`value`) against(? in boolean mode) AS relevancy", query])}",
+        :order => "relevancy DESC, value ASC"
+      }
+    end
 
     if defined?(WillPaginate) && page
       self.paginate(:all, search_options.merge(:page => page))
