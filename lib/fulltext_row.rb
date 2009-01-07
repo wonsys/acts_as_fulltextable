@@ -9,6 +9,8 @@ class FulltextRow < ActiveRecord::Base
   rescue
   end
   @@use_advanced_search = false
+  @@use_and_search = false
+  @@use_phrase_search = false
   
   belongs_to  :fulltextable,
               :polymorphic => true
@@ -67,6 +69,20 @@ class FulltextRow < ActiveRecord::Base
   def self.use_advanced_search!
     @@use_advanced_search = true
   end
+  
+  # Force usage of AND search instead of OR. Works only when advanced search
+  # is enabled.
+  #
+  def self.use_and_search!
+    @@use_and_search = true
+  end
+  
+  # Force usage of phrase search instead of OR search. Doesn't work when
+  # advanced search is enabled.
+  #
+  def self.use_phrase_search!
+    @@use_phrase_search = true
+  end
 private
   # Performs a raw full-text search.
   # * query: string to be searched
@@ -92,11 +108,18 @@ private
     
     if @@use_advanced_search
       query_parts = query.gsub(/[\*\+\-]/, '').split(' ')
-      search_query = query_parts.map {|w| "#{w}"}.join(' ')
+      if @@use_and_search
+        search_query = query_parts.map {|w| "+#{w}*"}.join(' ')
+      else
+        search_query = query_parts.map {|w| "#{w}"}.join(' ')
+      end
       matches = []
       matches << [query_parts.map {|w| "+#{w}"}.join(' '), 5] # match_all_exact
-      #matches << [query_parts.map {|w| "+#{w}*"}.join(' '), query_parts.size > 3 ? 2 : 1] # match_all_wildcard
-      matches << [query_parts.map {|w| "#{w}"}.join(' '), query_parts.size <= 3 ? 2.5 : 1] # match_some_exact
+      if @@use_and_search
+        matches << [query_parts.map {|w| "+#{w}*"}.join(' '), query_parts.size > 3 ? 2 : 1] # match_all_wildcard
+      else
+        matches << [query_parts.map {|w| "#{w}"}.join(' '), query_parts.size <= 3 ? 2.5 : 1] # match_some_exact
+      end
       #matches << [search_query, 0.5] # match_some_wildcard
       
       relevancy = matches.map {|m| sanitize_sql(["(match(`value`) against(? in boolean mode) * #{m[1]})", m[0]])}.join(' + ')
@@ -104,10 +127,14 @@ private
       search_options = {
         :conditions => [("match(value) against(? in boolean mode)" + only_condition), search_query],
         :select => "fulltext_rows.fulltextable_type, fulltext_rows.fulltextable_id, #{relevancy} AS relevancy",
-        :order => "#{sanitize_sql(['LOCATE(LOWER(?), LOWER(value)) ASC', query_parts.join(' ')])}, relevancy DESC, value ASC"
+        :order => "relevancy DESC, value ASC"
       }
     else
-      query = query.gsub(/(\S+)/, '\1*')
+      if @@use_phrase_search
+        query = "\"#{query}\""
+      else
+        query = query.gsub(/(\S+)/, '\1*')
+      end
       search_options = {
         :conditions => [("match(value) against(? in boolean mode)" + only_condition), query],
         :select => "fulltext_rows.fulltextable_type, fulltext_rows.fulltextable_id, #{sanitize_sql(["match(`value`) against(? in boolean mode) AS relevancy", query])}",
