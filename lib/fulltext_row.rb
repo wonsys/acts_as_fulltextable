@@ -87,7 +87,7 @@ private
     search_options = {
       :conditions => [("match(value) against(? in boolean mode)" + only_condition), query],
       :select => "fulltext_rows.*, #{sanitize_sql(["match(`value`) against(? in boolean mode) AS relevancy", query])}",
-      :order => 'relevancy DESC, value ASC'
+      :order => "relevancy DESC, #{sanitize_sql(['LOCATE(LOWER(?), LOWER(value)) ASC', query.gsub(/[\+\-\*]/, '')])}, value ASC"
     }
 
     if defined?(WillPaginate) && page
