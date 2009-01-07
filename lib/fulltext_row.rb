@@ -92,12 +92,12 @@ private
     
     if @@use_advanced_search
       query_parts = query.gsub(/[\*\+\-]/, '').split(' ')
-      search_query = query_parts.map {|w| "#{w}*"}.join(' ')
+      search_query = query_parts.map {|w| "#{w}"}.join(' ')
       matches = []
       matches << [query_parts.map {|w| "+#{w}"}.join(' '), 5] # match_all_exact
-      matches << [query_parts.map {|w| "+#{w}*"}.join(' '), query_parts.size > 3 ? 2 : 1] # match_all_wildcard
-      matches << [query_parts.map {|w| "#{w}"}.join(' '), query_parts.size <= 3 ? 2 : 1] # match_some_exact
-      matches << [search_query, 0.5] # match_some_wildcard
+      #matches << [query_parts.map {|w| "+#{w}*"}.join(' '), query_parts.size > 3 ? 2 : 1] # match_all_wildcard
+      matches << [query_parts.map {|w| "#{w}"}.join(' '), query_parts.size <= 3 ? 2.5 : 1] # match_some_exact
+      #matches << [search_query, 0.5] # match_some_wildcard
       
       relevancy = matches.map {|m| sanitize_sql(["(match(`value`) against(? in boolean mode) * #{m[1]})", m[0]])}.join(' + ')
       
